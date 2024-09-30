@@ -16,6 +16,8 @@ from typing import Optional
 import aiohttp
 import requests
 
+# 导入 UserExpirations
+from open_webui.apps.webui.models.user_expiration import UserExpirations
 
 from open_webui.apps.audio.main import app as audio_app
 from open_webui.apps.images.main import app as images_app
@@ -1045,6 +1047,17 @@ async def get_models(user=Depends(get_verified_user)):
 
 @app.post("/api/chat/completions")
 async def generate_chat_completions(form_data: dict, user=Depends(get_verified_user)):
+
+    # 检查用户是否过期
+    if user and UserExpirations.is_user_expired(user_id=user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="账户过期，请联系管理员续费"
+        )
+   
+
+    # 检查模型是否存在
+
     model_id = form_data["model"]
 
     if model_id not in app.state.MODELS:
@@ -1517,6 +1530,8 @@ async def generate_search_query(form_data: dict, user=Depends(get_verified_user)
         template = app.state.config.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE
     else:
         template = """Given the user's message and interaction history, decide if a web search is necessary. You must be concise and exclusively provide a search query if one is necessary. Refrain from verbose responses or any additional commentary. Prefer suggesting a search if uncertain to provide comprehensive or updated information. If a search isn't needed at all, respond with an empty string. Default to a search query when in doubt. Today's date is {{CURRENT_DATE}}.
+```
+</region_of_rewritten_file>
 
 User Message:
 {{prompt:end:4000}}

@@ -1,8 +1,9 @@
 import inspect
 import json
 import logging
-from typing import AsyncGenerator, Generator, Iterator
+from typing import AsyncGenerator, Generator, Iterator, Union
 
+# from backend.open_webui.apps.webui.routers.middleware import check_user_expiration
 from open_webui.apps.socket.main import get_event_call, get_event_emitter
 from open_webui.apps.webui.models.functions import Functions
 from open_webui.apps.webui.models.models import Models
@@ -19,6 +20,7 @@ from open_webui.apps.webui.routers import (
     tools,
     users,
     utils,
+    user_expiration
 )
 from open_webui.apps.webui.utils import load_function_module_by_id
 from open_webui.config import (
@@ -63,6 +65,8 @@ from open_webui.utils.payload import (
 from open_webui.utils.tools import get_tools
 
 app = FastAPI()
+
+# app.middleware("http")(check_user_expiration)
 
 log = logging.getLogger(__name__)
 
@@ -121,6 +125,7 @@ app.include_router(tools.router, prefix="/tools", tags=["tools"])
 app.include_router(functions.router, prefix="/functions", tags=["functions"])
 
 app.include_router(utils.router, prefix="/utils", tags=["utils"])
+app.include_router(user_expiration.router, prefix="/exp", tags=["expiration"])
 
 
 @app.get("/")
@@ -213,7 +218,7 @@ async def execute_pipe(pipe, params):
         return pipe(**params)
 
 
-async def get_message_content(res: str | Generator | AsyncGenerator) -> str:
+async def get_message_content(res: Union[str, Generator, AsyncGenerator]) -> str:
     if isinstance(res, str):
         return res
     if isinstance(res, Generator):
